@@ -1,0 +1,29 @@
+# ============================================================
+# .gitignore raíz del proyecto SaludWEB
+# Excluye dependencias, builds y secretos generados
+# ============================================================
+
+# Dependencias de Composer (backend)
+vendor/
+
+# Dependencias de Node (frontend SPA)
+node_modules/
+
+# Builds generados
+dist/
+
+# Binario de Composer (no se versiona)
+composer.phar
+
+# Entorno y secretos (nunca se suben)
+.env
+.env.local
+
+# Datos locales generados en runtime
+storage/
+
+# Sistema
+*.log
+Thumbs.db
+Desktop.ini
+.DS_Store
