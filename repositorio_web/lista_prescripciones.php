@@ -18,11 +18,11 @@ $paciente_id = $_GET['paciente_id'] ?? null;  // Filtro opcional por paciente; n
 // Construcción de la consulta SQL principal
 // LEFT JOIN = une las tablas pero mantiene todas las recetas aunque
 //             no tengan paciente o médico asociado
-$sql = "SELECT p.*, pac.nombre AS paciente_nombre, m.nombre AS medico_nombre  // Trae la receta y los nombres del paciente y médico
+$sql = "SELECT p.*, pac.nombre AS paciente_nombre, m.nombre AS medico_nombre
         FROM prescripciones p
-        LEFT JOIN pacientes pac ON p.id_paciente = pac.id  // Relaciona la receta con su paciente
-        LEFT JOIN medicos m ON p.id_medico = m.id  // Relaciona la receta con su médico
-        WHERE p.estado = ?";  // Filtro principal por estado usando marcador (?)
+        LEFT JOIN pacientes pac ON p.id_paciente = pac.id
+        LEFT JOIN medicos m ON p.id_medico = m.id
+        WHERE p.estado = ?";
 
 // Si se filtró por paciente, se agrega a la consulta
 // (int) castea a entero para prevenir inyección SQL
@@ -156,9 +156,13 @@ $mapaMedicamentos = $medsQuery->fetchAll(PDO::FETCH_KEY_PAIR);  // Construye el 
                         $items = json_decode($p['medicamentos'], true);  // true = array asociativo
                         if (is_array($items)) {
                             foreach ($items as $item) {
-                                // Busca el nombre en el mapa; si no existe, usa un texto por defecto.
-                                $nombreMed = $mapaMedicamentos[$item['id']] ?? "Medicamento desconocido";
-                                echo "• <strong>" . htmlspecialchars($nombreMed) . "</strong>: " . htmlspecialchars($item['dosis']) . "<br>";
+                                // Soporta los dos formatos posibles: {nombre, dosis} o {id, dosis}
+                                // Si el nombre viene explícito se usa; si no, se busca en el mapa por id
+                                $nombreMed = $item['nombre'] ?? ($mapaMedicamentos[$item['id'] ?? null] ?? 'Medicamento desconocido');
+                                // La dosis es opcional; si falta se muestra la línea sin dosis
+                                $dosis = $item['dosis'] ?? '';
+                                echo "• <strong>" . htmlspecialchars((string)$nombreMed) . "</strong>"
+                                   . ($dosis !== '' ? ": " . htmlspecialchars((string)$dosis) : "") . "<br>";
                             }
                         } else {
                             echo "Sin datos";
