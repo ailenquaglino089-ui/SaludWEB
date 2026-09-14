@@ -225,6 +225,40 @@ $router->post('/api/auth/cambiar-contrasena', function () use ($authService, $au
     $controller->cambiarContrasena();
 });
 
+// GET /api/estadisticas - Resumen para el Dashboard (protegida)
+// Alimenta los contadores del Dashboard de la SPA con datos REALES
+// (en lugar de valores fijos), manteniendo la pantalla sincronizada
+// con el servidor.
+$router->get('/api/estadisticas', function () use ($pdo, $authMiddleware) {
+    // Ruta protegida: solo usuarios con token válido pueden ver las estadísticas
+    $authMiddleware->verificarToken();
+    try {
+        // Cada consulta va aislada en try/catch: si una falla, su contador queda en 0
+        // y la respuesta general no se rompe (la página nunca explota por un dato).
+        $conteo = [
+            // Total de médicos registrados
+            'medicos' => 0,
+            // Médicos con estado activo (activo = 1)
+            'medicos_activos' => 0,
+            // Total de pacientes registrados
+            'pacientes' => 0,
+            // Recetas (prescripciones) que siguen vigentes
+            'recetas_activas' => 0,
+        ];
+        // COUNT(*) cuenta filas; fetchColumn() devuelve el único valor del SELECT
+        try { $conteo['medicos'] = (int) $pdo->query('SELECT COUNT(*) FROM medicos')->fetchColumn(); } catch (Throwable $e) {}
+        try { $conteo['medicos_activos'] = (int) $pdo->query('SELECT COUNT(*) FROM medicos WHERE activo = 1')->fetchColumn(); } catch (Throwable $e) {}
+        try { $conteo['pacientes'] = (int) $pdo->query('SELECT COUNT(*) FROM pacientes')->fetchColumn(); } catch (Throwable $e) {}
+        try { $conteo['recetas_activas'] = (int) $pdo->query("SELECT COUNT(*) FROM prescripciones WHERE estado = 'activa'")->fetchColumn(); } catch (Throwable $e) {}
+        // Responde con los contadores en la estructura JSON estándar de la API
+        Response::ok($conteo, 'Estadísticas obtenidas');
+    } catch (Exception $e) {
+        // Ante un error inesperado se responde 500 (nunca se exponen detalles internos)
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    }
+});
+
 // POST /api/medicos - Crear médico (protegida)
 $router->post('/api/medicos', function () use ($medicoService, $authMiddleware) {
     // Exige token JWT válido antes de permitir la creación (ruta protegida)

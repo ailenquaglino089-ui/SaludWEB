@@ -1,15 +1,23 @@
-// Importamos React y los hooks useState y useEffect para el manejo de estado y ciclo de vida.
-import React, { useState, useEffect } from 'react';
-// Importamos la instancia de axios configurada (base URL + interceptores de token y 401).
-import client from '../../api/client';
+// Importamos React y el hook useState para el estado local (useEffect lo maneja el hook useCrud).
+import React, { useState } from 'react';
 // Importamos el componente de formulario que se muestra al crear/editar.
 import FormularioPrescripcion from './FormularioPrescripcion';
 // Importamos el componente de cambio de estado de prescripción.
 import ChangeStateForm from './ChangeStateForm';
 // Importamos el hook useAuth para conocer el rol del usuario (RBAC en la UI).
 import { useAuth } from '../../hooks/useAuth';
+// Importamos el hook genérico de CRUD: centraliza carga, alta, edición y baja con toasts.
+import useCrud from '../../hooks/useCrud';
+// Importamos el sistema de toasts para confirmar el cambio de estado con feedback visual.
+import { useToast } from '../../context/ToastContext';
+// Importamos el modal de confirmación que reemplaza al window.confirm() nativo.
+import ConfirmModal from '../UI/ConfirmModal';
+// Importamos el esqueleto de carga (skeleton screen) que imita la tabla real.
+import SkeletonScreen from '../UI/SkeletonScreen';
+// Importamos la instancia de axios configurada (base URL + interceptores de token y 401).
+import client from '../../api/client';
 // Importamos utilidades CRUD: manejo de errores, extracción de datos, badges de estado y formato de fecha.
-import { handleApiError, getDatos, getStatusBadge, getStatusColor, formatDate } from '../../utils/crudHelpers';
+import { handleApiError, getStatusBadge, getStatusColor, formatDate } from '../../utils/crudHelpers';
 // Importamos los estilos CSS de Prescripciones.
 import './Prescripciones.css';
 
@@ -19,16 +27,29 @@ export default function ListaPrescripciones() {
   const { usuario } = useAuth();
   // RBAC en UI: 'esAdmin' es true solo si el tipo_usuario del usuario es 'admin'.
   const esAdmin = usuario?.tipo_usuario === 'admin';
-  // Estado con el listado de prescripciones obtenidas de la API.
-  const [prescripciones, setPrescripciones] = useState([]);
-  // Estado de carga: controla la visualización del spinner mientras llega la respuesta.
-  const [cargando, setCargando] = useState(true);
-  // Estado del mensaje de error global de la lista (null = sin error).
-  const [error, setError] = useState(null);
-  // Estado que alterna entre mostrar la lista o el formulario de prescripción.
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  // Estado que guarda la prescripción en edición (null = modo alta nueva).
-  const [prescripcionEditando, setPrescripcionEditando] = useState(null);
+
+  // El hook useCrud reemplaza TODO el estado y handlers del CRUD típico:
+  // data (prescripciones), cargando, error, cargar, guardar, eliminar,
+  // y el control del formulario de alta/edición.
+  const crud = useCrud({ endpoint: '/api/prescripciones', nombre: 'Prescripción' });
+  // Desestructuramos del hook lo que usa la vista de la lista.
+  const {
+    data: prescripciones,     // Lista de prescripciones (renombrada para el render)
+    cargando,                 // Flag de carga (controla el skeleton)
+    error,                    // Mensaje de error de la vista
+    formularioAbierto,        // true => mostrar formulario de alta/edición
+    editando,                 // Prescripción en edición (null en modo alta nueva)
+    abrirNuevo,               // Abre el formulario vacío (alta)
+    abrirEditar,              // Abre el formulario con la prescripción precargada
+    cerrarFormulario,         // Vuelve de formulario a lista
+    guardar,                  // Crea o actualiza la prescripción según el modo
+    itemAEliminar,            // Prescripción pendiente de confirmar eliminación
+    setItemAEliminar,         // Abre el modal de confirmación con una prescripción
+    eliminando,               // Flag de DELETE en curso (desactiva botones del modal)
+    confirmarEliminar,        // Ejecuta el DELETE confirmado
+    cancelarEliminar,         // Cierra el modal sin eliminar
+  } = crud;
+
   // Estado que alterna entre mostrar la lista o el formulario de cambio de estado.
   const [mostrarCambioEstado, setMostrarCambioEstado] = useState(false);
   // Estado con la prescripción de la cual se está cambiando el estado.
@@ -38,47 +59,8 @@ export default function ListaPrescripciones() {
   // Estado del filtro por estado (cadena vacía = todos los estados).
   const [filtroEstado, setFiltroEstado] = useState('');
 
-  // useEffect de montaje: carga las prescripciones la primera vez que se renderiza el componente.
-  useEffect(() => {
-    cargarPrescripciones();
-  }, []); // Dependencias vacías: se ejecuta una sola vez
-
-  // Función asíncrona que obtiene las prescripciones desde el backend.
-  const cargarPrescripciones = async () => {
-    try {
-      // Activamos el estado de carga antes de hacer la petición.
-      setCargando(true);
-      // GET a /api/prescripciones usando la instancia de axios (client) que agrega el token JWT automáticamente.
-      const response = await client.get('/api/prescripciones');
-      // getDatos extrae la lista real de la envoltura de la API ({ ok, mensaje, data }).
-      setPrescripciones(getDatos(response, []));
-      // Al cargar bien, limpiamos cualquier error previo.
-      setError(null);
-    } catch (err) {
-      // handleApiError convierte el error de axios en un mensaje legible para el usuario.
-      // (Nota: un 401 ya es redirigido a /login por el interceptor de client).
-      setError(handleApiError(err));
-    } finally {
-      // En cualquier caso apagamos el spinner.
-      setCargando(false);
-    }
-  };
-
-  // Handler del botón "Nueva Prescripción": prepara el modo alta nueva.
-  const handleNuevaPrescripcion = () => {
-    // Limpiamos la prescripción en edición para que el formulario arranque vacío.
-    setPrescripcionEditando(null);
-    // Mostramos el formulario.
-    setMostrarFormulario(true);
-  };
-
-  // Handler del botón "Editar": recibe la prescripción de la fila.
-  const handleEditarPrescripcion = (prescripcion) => {
-    // Guardamos la prescripción para precargar los datos en el formulario.
-    setPrescripcionEditando(prescripcion);
-    // Mostramos el formulario en modo edición.
-    setMostrarFormulario(true);
-  };
+  // Hook del sistema de toasts: lo usa el cambio de estado para confirmar éxito/error.
+  const { mostrarToast } = useToast();
 
   // Handler del botón "Cambiar Estado": prepara el formulario de cambio de estado.
   const handleCambiarEstado = (prescripcion) => {
@@ -88,77 +70,33 @@ export default function ListaPrescripciones() {
     setMostrarCambioEstado(true);
   };
 
-  // Handler del botón "Eliminar": recibe el id de la prescripción.
-  const handleEliminarPrescripcion = async (id) => {
-    // Confirmación nativa del navegador: si el usuario cancela, salimos sin eliminar.
-    if (!window.confirm('¿Estás seguro de que quieres eliminar esta prescripción?')) return;
-
-    try {
-      // DELETE a /api/prescripciones/{id} (el interceptor de client adjunta el token).
-      await client.delete(`/api/prescripciones/${id}`);
-      // Actualizamos el estado local filtrando la prescripción eliminada (optimiza sin recargar).
-      setPrescripciones(prescripciones.filter(p => p.id !== id));
-      // Limpiamos errores tras operación exitosa.
-      setError(null);
-    } catch (err) {
-      // Mostramos el mensaje de error traducido de la API.
-      setError(handleApiError(err));
-    }
-  };
-
-  // Handler del guardado: recibe los datos provenientes de FormularioPrescripcion.
-  const handleGuardarPrescripcion = async (datosFormulario) => {
-    try {
-      if (prescripcionEditando) {
-        // Actualizar
-        // PUT a /api/prescripciones/{id} con los datos editados.
-        await client.put(`/api/prescripciones/${prescripcionEditando.id}`, datosFormulario);
-        // Reemplazamos en el estado la prescripción editada, conservando su id.
-        setPrescripciones(prescripciones.map(p => p.id === prescripcionEditando.id ? { ...datosFormulario, id: prescripcionEditando.id } : p));
-      } else {
-        // Crear
-        // POST a /api/prescripciones con los datos nuevos (create).
-        const response = await client.post('/api/prescripciones', datosFormulario);
-        // Agregamos la prescripción creada (devuelta por la API) al final de la lista local.
-        setPrescripciones([...prescripciones, getDatos(response)]);
-      }
-      // Tras guardar, ocultamos el formulario.
-      setMostrarFormulario(false);
-      // Limpiamos la prescripción en edición para futuros formularios.
-      setPrescripcionEditando(null);
-      // Limpiamos errores.
-      setError(null);
-    } catch (err) {
-      // Mostramos el error de la API en la lista.
-      setError(handleApiError(err));
-    }
-  };
-
   // Handler del guardado de cambio de estado: recibe el nuevo estado desde ChangeStateForm.
   const handleGuardarCambioEstado = async (nuevoEstado) => {
+    // Inicio del bloque con captura de errores
     try {
       // PATCH a /api/prescripciones/{id}/estado con el nuevo estado en el body.
       await client.patch(`/api/prescripciones/${prescripcionParaCambioEstado.id}/estado`, {
         estado: nuevoEstado
       });
       // Actualizamos la prescripción correspondiente en el estado local con el nuevo estado.
-      setPrescripciones(prescripciones.map(p => 
+      // (Uso del estado funcional "prev" para trabajar sobre la versión más reciente).
+      crud.setData(prev => prev.map(p =>
         // Buscamos la prescripción que se estaba editando
-        p.id === prescripcionParaCambioEstado.id 
+        p.id === prescripcionParaCambioEstado.id
           // Solo a esa prescripción le actualizamos el campo 'estado'
-          ? { ...p, estado: nuevoEstado } 
+          ? { ...p, estado: nuevoEstado }
           // Al resto las dejamos intactas
           : p
       ));
+      // Confirmación de éxito proporcional a la acción (toast de actualización).
+      mostrarToast('Estado actualizado correctamente', 'success');
       // Ocultamos el formulario de cambio de estado.
       setMostrarCambioEstado(false);
       // Limpiamos la prescripción seleccionada.
       setPrescripcionParaCambioEstado(null);
-      // Limpiamos errores.
-      setError(null);
     } catch (err) {
-      // Mostramos el error de la API en la lista.
-      setError(handleApiError(err));
+      // Traduce el error de Axios a un mensaje legible para el usuario.
+      mostrarToast(handleApiError(err), 'error');
     }
   };
 
@@ -179,19 +117,16 @@ export default function ListaPrescripciones() {
     return matchBusqueda && matchEstado;
   });
 
-  // Si 'mostrarFormulario' es true, en lugar de la lista renderizamos el formulario de alta/edición.
-  if (mostrarFormulario) {
+  // Si 'formularioAbierto' es true, en lugar de la lista renderizamos el formulario de alta/edición.
+  if (formularioAbierto) {
     return (
       <FormularioPrescripcion
         // La prop 'prescripcion' es el objeto a editar o null para alta nueva
-        prescripcion={prescripcionEditando}
-        // La prop 'onGuardar' es el callback que recibe los datos del formulario
-        onGuardar={handleGuardarPrescripcion}
+        prescripcion={editando}
+        // La prop 'onGuardar' recibe los datos; useCrud decide entre POST o PUT
+        onGuardar={guardar}
         // La prop 'onCancelar' restaura la vista de la lista
-        onCancelar={() => {
-          setMostrarFormulario(false);
-          setPrescripcionEditando(null);
-        }}
+        onCancelar={cerrarFormulario}
       />
     );
   }
@@ -219,8 +154,8 @@ export default function ListaPrescripciones() {
       {/* Cabecera con título y botón de nueva prescripción */}
       <div className="lista-header">
         <h1>💊 Gestión de Prescripciones</h1>
-        {/* Botón que dispara el modo alta nueva */}
-        <button className="btn btn-primary" onClick={handleNuevaPrescripcion}>
+        {/* Botón que dispara el modo alta nueva (formulario vacío) */}
+        <button className="btn btn-primary" onClick={abrirNuevo}>
           ➕ Nueva Prescripción
         </button>
       </div>
@@ -253,20 +188,16 @@ export default function ListaPrescripciones() {
         </select>
       </div>
 
-      {/* Renderizado condicional en tres estados: cargando / vacío / tabla */}
+      {/* Estado 1 - CARGANDO: skeleton que imita la tabla real (en vez del spinner) */}
       {cargando ? (
-        // Estado 1: mostrando el spinner mientras carga
-        <div className="loading-container">
-          <div className="spinner"></div>
-          <p>Cargando prescripciones...</p>
-        </div>
+        <SkeletonScreen cargando={cargando} />
       ) : prescripcionesFiltr.length === 0 ? (
-        // Estado 2: el filtro no devolvió resultados
+        // Estado 2 - VACÍO: el filtro no devolvió resultados
         <div className="lista-vacia">
           <p>No hay prescripciones registradas</p>
         </div>
       ) : (
-        // Estado 3: hay prescripciones para mostrar en la tabla
+        // Estado 3 - CON DATOS: hay prescripciones para mostrar en la tabla
         <div className="tabla-container">
           <table className="tabla">
             <thead>
@@ -306,7 +237,7 @@ export default function ListaPrescripciones() {
                     {/* Botón de editar: pasa la prescripción completa al handler */}
                     <button 
                       className="btn btn-sm btn-info"
-                      onClick={() => handleEditarPrescripcion(prescripcion)}
+                      onClick={() => abrirEditar(prescripcion)}
                     >
                       ✏️ Editar
                     </button>
@@ -321,7 +252,8 @@ export default function ListaPrescripciones() {
                     {esAdmin && (
                     <button 
                       className="btn btn-sm btn-danger"
-                      onClick={() => handleEliminarPrescripcion(prescripcion.id)}
+                      // Abre el modal de confirmación con la prescripción como objetivo
+                      onClick={() => setItemAEliminar(prescripcion)}
                     >
                       🗑️ Eliminar
                     </button>
@@ -333,6 +265,26 @@ export default function ListaPrescripciones() {
           </table>
         </div>
       )}
+
+      {/* Modal de confirmación para acciones destructivas (reemplaza window.confirm) */}
+      <ConfirmModal
+        // 'abierto' es true solo si hay una prescripción pendiente de eliminar
+        abierto={!!itemAEliminar}
+        // Título específico de la acción destructiva
+        titulo="Eliminar prescripción"
+        // Descripción concreta de lo que se va a eliminar (guía: mensaje específico para el usuario)
+        mensaje={`¿Estás seguro de eliminar la prescripción del paciente "${itemAEliminar?.nombre_paciente}"? Esta acción no se puede deshacer.`}
+        // Mensaje de confirmación específico
+        textoConfirmar="Eliminar"
+        // Botón neutro de cancelación
+        textoCancelar="Cancelar"
+        // Desactiva ambos botones mientras corre el DELETE (evita envíos duplicados)
+        cargando={eliminando}
+        // Ejecuta el borrado solo cuando el usuario confirma
+        onConfirmar={confirmarEliminar}
+        // Cancela sin borrar nada
+        onCancelar={cancelarEliminar}
+      />
     </div>
   );
 }

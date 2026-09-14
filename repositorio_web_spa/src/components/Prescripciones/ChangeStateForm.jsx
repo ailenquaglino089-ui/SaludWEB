@@ -8,18 +8,29 @@ import './Prescripciones.css';
 export default function ChangeStateForm({ prescripcion, onGuardar, onCancelar }) {
   // Estado del nuevo estado elegido; se inicializa con el estado actual de la prescripción.
   const [nuevoEstado, setNuevoEstado] = useState(prescripcion.estado);
+  // Estado de envío: bloquea los botones mientras se procesa el PATCH en el backend
+  // (patrón de la guía: "deshabilitar los botones de envío durante el proceso").
+  const [guardando, setGuardando] = useState(false);
 
   // Handler del envío del formulario.
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     // Evitamos la recarga de página por defecto del navegador.
     e.preventDefault();
     // Solo tiene sentido guardar si el usuario cambió realmente el estado.
-    if (nuevoEstado !== prescripcion.estado) {
-      // Si cambió, invocamos onGuardar con el nuevo estado elegido.
-      onGuardar(nuevoEstado);
-    } else {
-      // Si no hubo cambios, cancelamos y volvemos a la lista.
+    if (nuevoEstado === prescripcion.estado) {
+      // Si no hubo cambios, cancelamos y volvemos a la lista (no se golpea la API en vano).
       onCancelar();
+      return;
+    }
+
+    // Activa el estado de envío: deshabilita los botones (evita envíos duplicados).
+    setGuardando(true);
+    try {
+      // Espera el PATCH del estado en el backend; el padre muestra un toast de éxito/error.
+      await onGuardar(nuevoEstado);
+    } finally {
+      // Se ejecuta siempre: restaura los botones tras terminar la petición.
+      setGuardando(false);
     }
   };
 
@@ -63,12 +74,12 @@ export default function ChangeStateForm({ prescripcion, onGuardar, onCancelar })
 
         {/* Acciones del formulario: botones de confirmar y cancelar */}
         <div className="form-acciones">
-          {/* Botón submit que guarda el cambio de estado */}
-          <button type="submit" className="btn btn-primary">
-            ✓ Cambiar Estado
+          {/* Botón submit que guarda el cambio de estado; deshabilitado mientras se procesa */}
+          <button type="submit" className="btn btn-primary" disabled={guardando}>
+            {guardando ? '⏳ Guardando...' : '✓ Cambiar Estado'}
           </button>
-          {/* Botón tipo "button" (no submit) que cancela sin enviar el form */}
-          <button type="button" className="btn btn-secondary" onClick={onCancelar}>
+          {/* Botón tipo "button" (no submit) que cancela sin enviar el form; bloqueado mientras se guarda */}
+          <button type="button" className="btn btn-secondary" onClick={onCancelar} disabled={guardando}>
             ✕ Cancelar
           </button>
         </div>

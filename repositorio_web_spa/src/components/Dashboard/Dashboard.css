@@ -160,6 +160,45 @@
   text-align: center;
 }
 
+/* Caja de error de estadísticas: fondo más oscuro para separar el estado de fallo */
+.stat-error {
+  /* Fondo gris-rojizo: comunica que algo falló (estado de error visible) */
+  background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+  /* Columna: mensaje arriba y botón de reintentar debajo */
+  display: flex;
+  /* Apilado vertical */
+  flex-direction: column;
+  /* Centrado horizontal del contenido */
+  align-items: center;
+  /* Espacio entre mensaje y botón */
+  gap: 12px;
+  /* Ocupa las tres columnas del grid en el estado de error */
+  grid-column: 1 / -1;
+}
+
+/* Botón de reintentar dentro de la caja de error (reusa clases globales .btn) */
+.stat-error .btn {
+  /* Ancho automático según contenido */
+  width: auto;
+}
+
+/* Skeleton dentro de la caja de estadística: barra animada del tamaño del número */
+.stat-skeleton {
+  /* El esqueleto se muestra en línea con el layout de la tarjeta */
+  display: inline-block;
+  /* Ancho estimado de un valor de 3 dígitos */
+  width: 48px;
+  /* Alto similar al de un número grande */
+  height: 32px;
+  /* Color gris claro adaptado al fondo degradado */
+  background-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Alinea verticalmente el skeleton con el texto de .stat-value */
+.stat-value .stat-skeleton {
+  vertical-align: middle;
+}
+
 /* Valor numérico de la estadística */
 .stat-value {
   /* Sin margen */

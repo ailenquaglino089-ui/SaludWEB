@@ -2,6 +2,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 // Importa las herramientas de React Router: BrowserRouter (enrutador HTML5), Routes/Route (definen rutas) y Navigate (redirección declarativa)
 import { AuthProvider, AuthContext } from './context/AuthContext.jsx';
 // Importa el Provider (provee la autenticación a toda la app) y el Context (para consumir el estado de sesión)
+import { ToastProvider } from './context/ToastContext.jsx';
+// Importa el Provider global de notificaciones (toasts): permite que cualquier componente muestre confirmaciones de éxito/error
+import ErrorBoundary from './components/UI/ErrorBoundary.jsx';
+// Importa el límite de errores: captura errores de renderizado y muestra un fallback en lugar de pantalla blanca
 import { useContext } from 'react';
 // Importa useContext, el hook de React para leer el valor de un Context (en este caso, AuthContext)
 
@@ -154,8 +158,14 @@ export default function App() {
       {/* BrowserRouter: enrutador que sincroniza las rutas con la URL del navegador (SPA) */}
       <AuthProvider>
         {/* AuthProvider: entrega el estado de autenticación y los métodos de login/registro/verificarSesion a todo el árbol */}
-        <AppContent />
-        {/* AppContent consume el contexto de sesión para armar el navbar, las rutas públicas y las protegidas */}
+        <ToastProvider>
+          {/* ToastProvider: habilita las notificaciones (toasts) en TODA la aplicación; cualquier vista puede llamar a mostrarToast() */}
+          <ErrorBoundary>
+            {/* ErrorBoundary: captura errores de renderizado inesperados y muestra un fallback (guía: "Error boundaries y logging") */}
+            <AppContent />
+            {/* AppContent consume el contexto de sesión para armar el navbar, las rutas públicas y las protegidas */}
+          </ErrorBoundary>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );

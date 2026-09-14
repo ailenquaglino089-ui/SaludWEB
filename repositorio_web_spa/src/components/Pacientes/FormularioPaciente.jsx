@@ -24,6 +24,11 @@ export default function FormularioPaciente({ paciente, onGuardar, onCancelar }) 
   const [errores, setErrores] = useState({});
   // Estado de carga: mientras se obtienen las obras sociales el formulario muestra un spinner.
   const [cargando, setCargando] = useState(true);
+  // Estado de envío: mientras se procesa en el backend el formulario queda bloqueado
+  // (patrón de la guía: "deshabilitar los botones de envío durante el proceso").
+  const [guardando, setGuardando] = useState(false);
+  // Error global del servidor (cuando el mensaje no se puede mapear a un campo).
+  const [errorServer, setErrorServer] = useState('');
 
   // useEffect de montaje: carga las obras sociales la primera vez que se renderiza.
   useEffect(() => {
@@ -96,17 +101,50 @@ export default function FormularioPaciente({ paciente, onGuardar, onCancelar }) 
   };
 
   // Handler del envío del formulario.
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     // Evitamos la recarga de página por defecto del navegador.
     e.preventDefault();
-    // Solo si pasa la validación invocamos onGuardar con un payload limpio.
-    if (validar()) {
-      onGuardar({
-        nombre: formData.nombre,
-        dni: formData.dni,
-        // Si no se eligió obra social se envía null (no '' ), respetando el contrato del backend.
-        id_obra_social: formData.id_obra_social || null
-      });
+    // Limpia el error global del servidor en cada intento nuevo.
+    setErrorServer('');
+
+    // Solo si pasa la validación local se envía un payload limpio al backend.
+    if (!validar()) return;
+
+    // Arma el payload que viaja al backend respetando el contrato de la API.
+    const payload = {
+      nombre: formData.nombre,
+      dni: formData.dni,
+      // Si no se eligió obra social se envía null (no '' ), respetando el contrato del backend.
+      id_obra_social: formData.id_obra_social || null
+    };
+
+    // Activa el estado de envío: deshabilita los botones (evita envíos duplicados).
+    setGuardando(true);
+    try {
+      // Espera la respuesta del backend (POST o PUT según el modo) y, si falla,
+      // la promesa se rechaza con el error y pasamos al catch.
+      await onGuardar(payload);
+    } catch (err) {
+      // ------------------------------------------------------------
+      // Mapeo de errores del servidor a los campos del formulario.
+      // La respuesta 422 del backend puede traer errores por campo en
+      // "errores": { campo: 'mensaje' }. Si existen, se asignan al
+      // input correspondiente (patrón de la guía: no usar alert genérico).
+      // ------------------------------------------------------------
+      const detalle = err.response?.data?.errores;
+      // Solo se considera mapeo si "errores" es un objeto no-array (formato por campo)
+      if (detalle && typeof detalle === 'object' && !Array.isArray(detalle)) {
+        // Fusiona los errores del servidor con los errores locales existentes
+        setErrores(prev => ({ ...prev, ...detalle }));
+      }
+      // Si el backend solo manda un mensaje general, se muestra en un banner
+      // global del formulario (no se pierde la información del error).
+      const mensaje = err.response?.data?.mensaje || 'No se pudo guardar. Intentá nuevamente.';
+      // Guarda el mensaje para mostrarlo en el bloque rojo del formulario
+      setErrorServer(mensaje);
+    } finally {
+      // Se ejecuta siempre: restaura los botones tras terminar el envío
+      setGuardando(false);
     }
   };
 
@@ -126,6 +164,10 @@ export default function FormularioPaciente({ paciente, onGuardar, onCancelar }) 
 
       {/* Formulario que dispara handleSubmit al enviarse */}
       <form className="formulario" onSubmit={handleSubmit}>
+        {/* Error global del servidor: se muestra solo si hubo un fallo que no se pudo
+            asignar a un campo específico (patrón de la guía: errores visibles y accionables) */}
+        {errorServer && <div className="alert alert-error">{errorServer}</div>}
+
         {/* Grupo del campo Nombre Completo */}
         <div className="form-grupo">
           <label>Nombre Completo *</label>
@@ -190,12 +232,12 @@ export default function FormularioPaciente({ paciente, onGuardar, onCancelar }) 
 
         {/* Acciones del formulario: botones Guardar y Cancelar */}
         <div className="form-acciones">
-          {/* Botón submit que guarda los datos */}
-          <button type="submit" className="btn btn-primary">
-            💾 Guardar
+          {/* Botón submit que guarda los datos; deshabilitado durante el envío (evita doble submit) */}
+          <button type="submit" className="btn btn-primary" disabled={guardando}>
+            {guardando ? '💾 Guardando...' : '💾 Guardar'}
           </button>
-          {/* Botón tipo "button" (no submit) que cancela sin enviar el form */}
-          <button type="button" className="btn btn-secondary" onClick={onCancelar}>
+          {/* Botón tipo "button" (no submit) que cancela sin enviar el form; bloqueado mientras se guarda */}
+          <button type="button" className="btn btn-secondary" onClick={onCancelar} disabled={guardando}>
             ✕ Cancelar
           </button>
         </div>

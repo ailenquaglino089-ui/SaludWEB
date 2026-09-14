@@ -1,13 +1,17 @@
-// Importamos React y los hooks useState y useEffect para el manejo de estado y ciclo de vida.
-import React, { useState, useEffect } from 'react';
-// Importamos la instancia de axios configurada (base URL + interceptores de token y 401).
-import client from '../../api/client';
+// Importamos React y el hook useState para el estado local (useEffect lo maneja el hook useCrud).
+import React, { useState } from 'react';
 // Importamos el componente de formulario que se muestra al crear/editar.
 import FormularioMedico from './FormularioMedico';
 // Importamos el hook useAuth para conocer el rol del usuario (RBAC en la UI).
 import { useAuth } from '../../hooks/useAuth';
-// Importamos utilidades CRUD: manejo de errores de API, extracción de datos y helpers de badges de estado.
-import { handleApiError, getDatos, getStatusBadge, getStatusColor } from '../../utils/crudHelpers';
+// Importamos el hook genérico de CRUD: centraliza carga, alta, edición y baja con toasts.
+import useCrud from '../../hooks/useCrud';
+// Importamos el modal de confirmación que reemplaza al window.confirm() nativo.
+import ConfirmModal from '../UI/ConfirmModal';
+// Importamos el esqueleto de carga (skeleton screen) que imita la tabla real.
+import SkeletonScreen from '../UI/SkeletonScreen';
+// Importamos utilidades CRUD: extracción de datos y helpers de badges de estado.
+import { getStatusBadge, getStatusColor } from '../../utils/crudHelpers';
 // Importamos los estilos CSS compartidos.
 import './Medicos.css';
 
@@ -17,108 +21,34 @@ export default function ListaMedicos() {
   const { usuario } = useAuth();
   // RBAC en UI: 'esAdmin' es true solo si el tipo_usuario del usuario es 'admin'.
   const esAdmin = usuario?.tipo_usuario === 'admin';
-  // Estado con el listado de médicos obtenidos de la API.
-  const [medicos, setMedicos] = useState([]);
-  // Estado de carga: controla la visualización del spinner mientras llega la respuesta.
-  const [cargando, setCargando] = useState(true);
-  // Estado del mensaje de error global de la lista (null = sin error).
-  const [error, setError] = useState(null);
-  // Estado que alterna entre mostrar la lista o el formulario de médico.
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  // Estado que guarda el médico en edición (null = modo alta nueva).
-  const [medicoEditando, setMedicoEditando] = useState(null);
+
+  // El hook useCrud reemplaza TODO el estado y handlers repetidos:
+  // data (médicos), cargando, error, cargar, guardar, eliminar,
+  // y el control del formulario (abrirNuevo, abrirEditar, cerrarFormulario).
+  const crud = useCrud({ endpoint: '/api/medicos', nombre: 'Médico' });
+  // Desestructuramos del hook lo que usa la vista de la lista.
+  const {
+    data: medicos,          // Lista de médicos (renombrada para el render)
+    cargando,               // Flag de carga (controla el skeleton)
+    error,                  // Mensaje de error de la vista
+    formularioAbierto,      // true => mostrar formulario; false => mostrar lista
+    editando,               // Médico en edición (null en modo alta nueva)
+    abrirNuevo,             // Abre el formulario vacío (alta)
+    abrirEditar,            // Abre el formulario con el médico precargado
+    cerrarFormulario,       // Vuelve de formulario a lista
+    guardar,                // Crea o actualiza el médico según el modo
+    itemAEliminar,          // Médico pendiente de confirmar eliminación
+    setItemAEliminar,       // Abre el modal de confirmación con un médico
+    eliminando,             // Flag de DELETE en curso (desactiva botones del modal)
+    confirmarEliminar,      // Ejecuta el DELETE confirmado
+    cancelarEliminar,       // Cierra el modal sin eliminar
+  } = crud;
+
   // Estado del texto de búsqueda para filtrar la tabla.
   const [busqueda, setBusqueda] = useState('');
 
-  // useEffect de montaje: carga los médicos la primera vez que se renderiza el componente.
-  useEffect(() => {
-    cargarMedicos();
-  }, []); // Dependencias vacías: se ejecuta una sola vez
-
-  // Función asíncrona que obtiene los médicos desde el backend.
-  const cargarMedicos = async () => {
-    try {
-      // Activamos el estado de carga antes de hacer la petición.
-      setCargando(true);
-      // GET a /api/medicos usando la instancia de axios (client) que agrega el token JWT automáticamente.
-      const response = await client.get('/api/medicos');
-      // getDatos extrae la lista real de la envoltura de la API ({ ok, mensaje, data }).
-      setMedicos(getDatos(response, []));
-      // Al cargar bien, limpiamos cualquier error previo.
-      setError(null);
-    } catch (err) {
-      // handleApiError convierte el error de axios en un mensaje legible para el usuario.
-      // (Nota: un 401 ya es redirigido a /login por el interceptor de client).
-      setError(handleApiError(err));
-    } finally {
-      // En cualquier caso apagamos el spinner.
-      setCargando(false);
-    }
-  };
-
-  // Handler del botón "Nuevo Médico": prepara el modo alta nueva.
-  const handleNuevoMedico = () => {
-    // Limpiamos el médico en edición para que el formulario arranque vacío.
-    setMedicoEditando(null);
-    // Mostramos el formulario.
-    setMostrarFormulario(true);
-  };
-
-  // Handler del botón "Editar": recibe el médico de la fila.
-  const handleEditarMedico = (medico) => {
-    // Guardamos el médico para precargar los datos en el formulario.
-    setMedicoEditando(medico);
-    // Mostramos el formulario en modo edición.
-    setMostrarFormulario(true);
-  };
-
-  // Handler del botón "Eliminar": recibe el id del médico.
-  const handleEliminarMedico = async (id) => {
-    // Confirmación nativa del navegador: si el usuario cancela, salimos sin eliminar.
-    if (!window.confirm('¿Estás seguro de que quieres eliminar este médico?')) return;
-
-    try {
-      // DELETE a /api/medicos/{id} (el interceptor de client adjunta el token).
-      await client.delete(`/api/medicos/${id}`);
-      // Actualizamos el estado local filtrando el médico eliminado (optimiza sin recargar).
-      setMedicos(medicos.filter(m => m.id !== id));
-      // Limpiamos errores tras operación exitosa.
-      setError(null);
-    } catch (err) {
-      // Mostramos el mensaje de error traducido de la API.
-      setError(handleApiError(err));
-    }
-  };
-
-  // Handler del guardado: recibe los datos provenientes de FormularioMedico.
-  const handleGuardarMedico = async (datosFormulario) => {
-    try {
-      if (medicoEditando) {
-        // Actualizar
-        // PUT a /api/medicos/{id} con los datos editados.
-        await client.put(`/api/medicos/${medicoEditando.id}`, datosFormulario);
-        // Reemplazamos en el estado el médico editado, conservando su id.
-        setMedicos(medicos.map(m => m.id === medicoEditando.id ? { ...datosFormulario, id: medicoEditando.id } : m));
-      } else {
-        // Crear
-        // POST a /api/medicos con los datos nuevos (create).
-        const response = await client.post('/api/medicos', datosFormulario);
-        // Agregamos el médico creado (devuelto por la API) al final de la lista local.
-        setMedicos([...medicos, getDatos(response)]);
-      }
-      // Tras guardar, ocultamos el formulario.
-      setMostrarFormulario(false);
-      // Limpiamos el médico en edición para futuros formularios.
-      setMedicoEditando(null);
-      // Limpiamos errores.
-      setError(null);
-    } catch (err) {
-      // Mostramos el error de la API en la lista.
-      setError(handleApiError(err));
-    }
-  };
-
   // Filtrado por búsqueda: filtra los médicos por nombre, matrícula o especialidad.
+  // (Se mantiene en cliente por ser un dataset pequeño ya cargado en memoria).
   const medicosFiltr = medicos.filter(m =>
     // Compara nombre (en minúsculas) contra el texto de búsqueda (en minúsculas)
     m.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -128,19 +58,16 @@ export default function ListaMedicos() {
     m.especialidad?.toLowerCase().includes(busqueda.toLowerCase())
   );
 
-  // Si 'mostrarFormulario' es true, en lugar de la lista renderizamos el formulario.
-  if (mostrarFormulario) {
+  // Si 'formularioAbierto' es true, en lugar de la lista renderizamos el formulario.
+  if (formularioAbierto) {
     return (
       <FormularioMedico
         // La prop 'medico' es el objeto a editar o null para alta nueva
-        medico={medicoEditando}
-        // La prop 'onGuardar' es el callback que recibe los datos del formulario
-        onGuardar={handleGuardarMedico}
+        medico={editando}
+        // La prop 'onGuardar' recibe los datos; useCrud decide entre POST o PUT
+        onGuardar={guardar}
         // La prop 'onCancelar' restaura la vista de la lista
-        onCancelar={() => {
-          setMostrarFormulario(false);
-          setMedicoEditando(null);
-        }}
+        onCancelar={cerrarFormulario}
       />
     );
   }
@@ -151,8 +78,8 @@ export default function ListaMedicos() {
       {/* Cabecera con título y botón de nuevo médico */}
       <div className="lista-header">
         <h1>👨‍⚕️ Gestión de Médicos</h1>
-        {/* Botón que dispara el modo alta nueva */}
-        <button className="btn btn-primary" onClick={handleNuevoMedico}>
+        {/* Botón que dispara el modo alta nueva (formulario vacío) */}
+        <button className="btn btn-primary" onClick={abrirNuevo}>
           ➕ Nuevo Médico
         </button>
       </div>
@@ -172,20 +99,16 @@ export default function ListaMedicos() {
         />
       </div>
 
-      {/* Renderizado condicional en tres estados: cargando / vacío / tabla */}
+      {/* Estado 1 - CARGANDO: skeleton que imita la tabla real (en vez del spinner) */}
       {cargando ? (
-        // Estado 1: mostrando el spinner mientras carga
-        <div className="loading-container">
-          <div className="spinner"></div>
-          <p>Cargando médicos...</p>
-        </div>
+        <SkeletonScreen cargando={cargando} />
       ) : medicosFiltr.length === 0 ? (
-        // Estado 2: el filtro no devolvió resultados
+        // Estado 2 - VACÍO: el filtro no devolvió resultados
         <div className="lista-vacia">
           <p>No hay médicos registrados</p>
         </div>
       ) : (
-        // Estado 3: hay médicos para mostrar en la tabla
+        // Estado 3 - CON DATOS: hay médicos para mostrar en la tabla
         <div className="tabla-container">
           <table className="tabla">
             <thead>
@@ -219,7 +142,7 @@ export default function ListaMedicos() {
                     {/* Botón de editar: pasa el médico completo al handler */}
                     <button 
                       className="btn btn-sm btn-info"
-                      onClick={() => handleEditarMedico(medico)}
+                      onClick={() => abrirEditar(medico)}
                     >
                       ✏️ Editar
                     </button>
@@ -227,7 +150,8 @@ export default function ListaMedicos() {
                     {esAdmin && (
                       <button 
                         className="btn btn-sm btn-danger"
-                        onClick={() => handleEliminarMedico(medico.id)}
+                        // Abre el modal de confirmación con el médico como objetivo
+                        onClick={() => setItemAEliminar(medico)}
                       >
                         🗑️ Eliminar
                       </button>
@@ -239,6 +163,26 @@ export default function ListaMedicos() {
           </table>
         </div>
       )}
+
+      {/* Modal de confirmación para acciones destructivas (reemplaza window.confirm) */}
+      <ConfirmModal
+        // 'abierto' es true solo si hay un médico pendiente de eliminar
+        abierto={!!itemAEliminar}
+        // Título específico de la acción destructiva
+        titulo="Eliminar médico"
+        // Descripción concreta de lo que se va a eliminar (guía: mensaje específico)
+        mensaje={`¿Estás seguro de eliminar a "${itemAEliminar?.nombre}"? Esta acción no se puede deshacer.`}
+        // Botón rojo de confirmación con texto demarcado
+        textoConfirmar="Eliminar"
+        // Botón neutro de cancelación
+        textoCancelar="Cancelar"
+        // Desactiva ambos botones mientras corre el DELETE (evita envíos duplicados)
+        cargando={eliminando}
+        // Ejecuta el borrado solo cuando el usuario confirma
+        onConfirmar={confirmarEliminar}
+        // Cancela sin borrar nada
+        onCancelar={cancelarEliminar}
+      />
     </div>
   );
 }

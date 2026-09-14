@@ -1,0 +1,125 @@
+/* ============================================================
+   Toast.css - Estilos del sistema de notificaciones (toasts)
+   ============================================================
+   Los toasts flotan fijos en la esquina inferior derecha,
+   apilados verticalmente, con auto-descarte. Cada tipo tiene
+   su color semántico (éxito=verde, error=rojo, info=azul...).
+   ============================================================ */
+
+/* Contenedor fijo de la pila de toasts en la esquina inferior derecha */
+.toast-container {
+  position: fixed;        /* Fijo: no se mueve al hacer scroll */
+  bottom: 20px;           /* Separación del borde inferior */
+  right: 20px;            /* Separación del borde derecho */
+  z-index: 10000;         /* Valor alto: siempre por encima de modales y navbar */
+  display: flex;          /* Flex en columna para apilar los toasts */
+  flex-direction: column;
+  gap: 10px;              /* Espacio vertical entre toasts */
+  max-width: 360px;       /* Ancho máximo para no invadir la pantalla */
+}
+
+/* Tarjeta individual de un toast */
+.toast {
+  display: flex;                 /* Filas: mensaje a la izquierda, botón a la derecha */
+  align-items: center;           /* Alineación vertical centrada */
+  justify-content: space-between; /* Mensaje y botón en extremos opuestos */
+  gap: 12px;                     /* Separación entre mensaje y botón */
+  padding: 12px 16px;            /* Relleno interno cómodo */
+  border-radius: 8px;            /* Esquinas redondeadas */
+  color: #fff;                   /* Texto blanco sobre color de fondo */
+  font-size: 14px;               /* Tamaño de letra legible */
+  line-height: 1.4;              /* Interlineado suave */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25); /* Sombra: flota sobre la interfaz */
+  animation: toastIn 0.3s ease; /* Animación de entrada desde la derecha */
+  cursor: default;               /* No parece clicable por el cursor (no es un enlace) */
+}
+
+/* Borde izquierdo de 4px más claro que el fondo: refuerza el color semántico */
+.toast::before {
+  content: '';             /* Pseudo-elemento decorativo */
+  position: absolute;      /* Posicionado respecto al toast */
+  left: 0;                 /* Pegado al borde izquierdo */
+  top: 0;                  /* Desde arriba */
+  bottom: 0;               /* Hasta abajo */
+  width: 4px;              /* Grosor de la barra lateral */
+  border-top-left-radius: 8px; /* Respeta el radio de la esquina */
+  border-bottom-left-radius: 8px;
+}
+
+/* Para que el pseudo-elemento se posicione bien, el toast necesita posición relativa */
+.toast {
+  position: relative;
+  padding-left: 20px; /* Espacio extra a la izquierda para la barra decorativa */
+}
+
+/* --- Variantes de color por tipo de notificación --- */
+
+/* Éxito (verde): confirmaciones de operaciones que terminaron bien */
+.toast-success {
+  background-color: #4CAF50; /* Verde semántico de OK */
+}
+.toast-success::before {
+  background-color: #2e7d32; /* Verde oscuro para el detalle lateral */
+}
+
+/* Error (rojo): operaciones que fallaron */
+.toast-error {
+  background-color: #f44336; /* Rojo semántico de fallo */
+}
+.toast-error::before {
+  background-color: #b71c1c; /* Rojo más oscuro para el detalle */
+}
+
+/* Información (azul): avisos neutros */
+.toast-info {
+  background-color: #2196F3; /* Azul semántico de información */
+}
+.toast-info::before {
+  background-color: #0d47a1; /* Azul oscuro para el detalle */
+}
+
+/* Advertencia (naranja): llamados de atención */
+.toast-warning {
+  background-color: #FF9800; /* Naranja semántico de advertencia */
+}
+.toast-warning::before {
+  background-color: #e65100; /* Naranja oscuro para el detalle */
+}
+
+/* Botón de cierre del toast "×" */
+.toast-cerrar {
+  background: transparent;  /* Sin fondo: se ve solo la "x" */
+  border: none;             /* Sin borde nativo */
+  color: rgba(255, 255, 255, 0.9); /* Blanco casi opaco */
+  font-size: 18px;          /* Tamaño cómodo para tocar */
+  line-height: 1;           /* Sin sobre-espaciado vertical */
+  cursor: pointer;          /* Manito al pasar por encima */
+  padding: 4px;             /* Área de clic generosa */
+}
+
+/* Efecto hover del botón de cierre: la "x" se vuelve completamente blanca */
+.toast-cerrar:hover {
+  color: #fff;
+  opacity: 0.85; /* Ligera transparencia al pasar el mouse */
+}
+
+/* Animación de entrada: el toast se desliza desde la derecha con fade */
+@keyframes toastIn {
+  from {
+    opacity: 0;              /* Empieza invisible */
+    transform: translateX(20px); /* Desplazado 20px a la derecha */
+  }
+  to {
+    opacity: 1;              /* Termina totalmente visible */
+    transform: translateX(0); /* En su posición final */
+  }
+}
+
+/* Responsive: en pantallas muy chicas el contenedor ocupa casi todo el ancho */
+@media (max-width: 480px) {
+  .toast-container {
+    right: 10px;      /* Menos margen derecho */
+    left: 10px;       /* Margen izquierdo simétrico */
+    max-width: none;  /* Elto a ancho completo (dentro de los 10px de margen) */
+  }
+}
