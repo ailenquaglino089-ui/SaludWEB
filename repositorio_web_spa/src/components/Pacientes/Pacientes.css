@@ -1,4 +1,0 @@
-/* Estilos para Pacientes - Reutiliza clases comunes de Medicos.css */
-/* Importamos los estilos de Medicos.css para reutilizar las clases compartidas
-   (lista-container, tabla, botones, formularios, etc.) y evitar duplicar código. */
-@import '../Medicos/Medicos.css';
