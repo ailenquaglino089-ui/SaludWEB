@@ -30,6 +30,9 @@ los endpoints existentes de turnos y el backend sigue aplicando los permisos por
 
 ## Demo rápida
 
+Enlace público para compartir: <https://saludweb.taileeeb72.ts.net/>. Usar la raíz, sin
+agregar `/login` ni `/register`, para que la otra persona vea primero la HOME.
+
 1. Abrir la HOME en `/` y presentar el flyer.
 2. Reservar un turno como paciente desde `/turnera`, eligiendo profesional, día y hora.
 3. Entrar como médico y abrir **Mi agenda** para ver el mismo turno con fecha, hora y
