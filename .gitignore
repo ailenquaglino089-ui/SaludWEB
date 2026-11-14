@@ -26,6 +26,10 @@ SaludWEB_Web/
 .kilo/
 .kilocode/
 
+# --- Copia local del paquete de marca ------------------------
+# Los logos publicados están en SaludWEB_Web/docs/brand/.
+logo-canva/
+
 # --- Dependencias y builds ----------------------------------
 vendor/
 node_modules/
