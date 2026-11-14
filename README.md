@@ -16,8 +16,9 @@ repositorios que comparten la misma API y la misma identidad visual.
 Esta iteración se concentró en la SPA web:
 
 - La HOME pública ahora replica el flyer de presentación: fondo azul tecnológico,
-  logo blanco, persona con anteojos, cuatro funciones, CTA, firma **Ailen Quaglino
-  Fail** y robot con laptop.
+  logo blanco, mujer de cabello largo y claro con flequillo recto, anteojos de
+  armazón claro y ropa roja, cuatro funciones, CTA, firma **Ailen Quaglino Fail** y
+  robot con laptop.
 - `/` siempre muestra la HOME. Si la persona tiene sesión, los botones cambian a
   **Ir al panel** y **Ver turnera**.
 - El Dashboard del médico suma **Pacientes que reservaron** y la pantalla
