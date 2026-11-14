@@ -33,7 +33,7 @@ dist/
 build/
 .vite/
 
-# --- Entorno y secretos (nunca se suben) -------------------
+# --- Entorno y secretos (nunca se suben) ---------------------
 .env
 .env.local
 .env.*.local
