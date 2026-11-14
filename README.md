@@ -4,6 +4,8 @@ Sistema de gestión de salud **SaludWEB PRO**. El proyecto está dividido en tre
 repositorios que comparten la misma API, la misma identidad visual y el mismo flujo
 de turnos: web, backend y mobile.
 
+Repositorio de portada: <https://github.com/ailenquaglino089-ui/SaludWEB>.
+
 ## Demo pública
 
 <https://saludweb.taileeeb72.ts.net/>
