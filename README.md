@@ -42,7 +42,7 @@ código: reutilizan los mismos endpoints y permisos.
 - `/` siempre muestra la HOME, con o sin sesión. Si hay sesión, los botones cambian
   a **Ir al panel** y **Ver turnera**.
 - La HOME replica el flyer de presentación: fondo azul tecnológico, logo blanco,
-  cuatro funciones, CTA, firma **Ailen Quaglino Fail** y robot con laptop.
+  cuatro funciones, CTA, firma **Ailen Quaglino Fail** y robot con netbook.
 - La mujer del flyer es un SVG inline con cabello largo y claro, flequillo recto,
   anteojos con bordes violeta oscuro, remera roja de mangas largas y collar gris en
   forma de luna con brillo suave.
@@ -74,6 +74,51 @@ código: reutilizan los mismos endpoints y permisos.
   iteración no cambió su código y enlazan al PR principal.
 - `SaludWEB_Web/docs/brand/README.md`: paquete de marca y uso del logo en la HOME.
 
+## Iteración 16/11/2026: robot con netbook y HOME estable
+
+La iteración se concentró otra vez en la SPA web. El backend, la base de datos y
+la app móvil no cambiaron de código.
+
+### Robot programador
+
+- El robot del flyer ahora usa una **netbook** compacta: marco grueso, pantalla
+  chica, cámara, bisagra, teclado, touchpad y manos apoyadas.
+- La pantalla muestra una ventana de código con puntos de color, líneas, llaves
+  `</>` y cursor.
+- El SVG sigue siendo inline en `SaludWEB_Web/src/components/Home/Home.jsx`, sin
+  depender de una imagen externa; el `aria-label` describe al robot programando
+  en una netbook.
+
+### HOME estable con token vencido
+
+- En `SaludWEB_Web/src/api/client.js` se agregó `esRutaPublica()`.
+- Si una ruta pública (`/`, `/login`, `/register`, `/turnera`, etc.) recibe un
+  `401`, se limpia la sesión vencida pero **no** se redirige al login.
+- Las rutas protegidas conservan la redirección a `/login`.
+
+### Paso a paso
+
+1. Revisar `RobotFlyer` dentro de `Home.jsx`.
+2. Reemplazar la laptop por la netbook y ajustar brazos, manos, teclado y
+   pantalla.
+3. Actualizar el `aria-label` y los comentarios del componente.
+4. Revisar `client.js` y separar rutas públicas de protegidas en el interceptor
+   401.
+5. Ejecutar `npm test` y `npm run build` en `SaludWEB_Web`.
+6. Probar con Playwright la raíz `/` con token inválido y `/dashboard`.
+7. Documentar en los READMEs y publicar por Pull Request.
+
+### Verificación
+
+- `npm test` en Web: **32/32 pruebas OK**.
+- `npm run build` en Web: **OK, 140 módulos**.
+- Playwright: `/` se mantiene en la HOME, limpia el token vencido y no muestra
+  el login; `/dashboard` sigue redirigiendo a `/login`.
+- El detalle completo queda en
+  [`SaludWEB_Web/README.md`](https://github.com/ailenquaglino089-ui/SaludWEB_Web/blob/main/README.md).
+- Publicación: [PR #69](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/69),
+  merge `0208692` en `main`.
+
 ## Verificación
 
 - `npm test` en Web: **32/32 pruebas OK**.
@@ -92,9 +137,10 @@ Los merges de esta iteración quedaron así:
 
 | Repositorio | PR | Merge en `main` |
 | --- | --- | --- |
-| SaludWEB_Web | [#68](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/68) | `09d78e1` |
-| SaludWEB_Mobile | [#49](https://github.com/ailenquaglino089-ui/SaludWEB_Mobile/pull/49) | `9854e96` |
-| SaludWEB_Backend | [#53](https://github.com/ailenquaglino089-ui/SaludWEB_Backend/pull/53) | `76f36a4` |
+| SaludWEB_Web (13-14/11/2026) | [#68](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/68) | `09d78e1` |
+| SaludWEB_Mobile (13-14/11/2026) | [#49](https://github.com/ailenquaglino089-ui/SaludWEB_Mobile/pull/49) | `9854e96` |
+| SaludWEB_Backend (13-14/11/2026) | [#53](https://github.com/ailenquaglino089-ui/SaludWEB_Backend/pull/53) | `76f36a4` |
+| SaludWEB_Web (16/11/2026) | [#69](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/69) | `0208692` |
 
 Flujo recomendado para cada repositorio:
 
