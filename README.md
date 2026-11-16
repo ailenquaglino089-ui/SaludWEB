@@ -119,6 +119,29 @@ la app móvil no cambiaron de código.
 - Publicación: [PR #69](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/69),
   merge `0208692` en `main`.
 
+## Iteración 16/11/2026: guardado de contraseña en el navegador
+
+Se ajustó solo el formulario de login de la SPA web para que Chrome, Edge y otros
+navegadores reconozcan las credenciales y ofrezcan guardarlas. **No se tocaron
+usuarios, contraseñas, backend, base de datos ni app móvil.**
+
+### Paso a paso
+
+1. Revisar `SaludWEB_Web/src/components/Auth/Login.jsx`.
+2. Agregar `autoComplete="on"` al `<form>`.
+3. Agregar `name="email"` y `autoComplete="username"` al campo de email.
+4. Agregar `name="password"` al campo de contraseña y conservar
+   `autoComplete="current-password"`.
+5. Verificar en Playwright que el formulario expone esos atributos y que el
+   login de la administradora llega a `/dashboard`.
+6. Ejecutar `npm test` (32/32) y `npm run build` (OK, 140 módulos).
+7. Documentar y publicar por Pull Request.
+
+El detalle completo queda en
+[`SaludWEB_Web/README.md`](https://github.com/ailenquaglino089-ui/SaludWEB_Web/blob/main/README.md).
+Publicación: [PR #70](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/70),
+merge `a3f389b` en `main`.
+
 ## Verificación
 
 - `npm test` en Web: **32/32 pruebas OK**.
@@ -140,7 +163,8 @@ Los merges de esta iteración quedaron así:
 | SaludWEB_Web (13-14/11/2026) | [#68](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/68) | `09d78e1` |
 | SaludWEB_Mobile (13-14/11/2026) | [#49](https://github.com/ailenquaglino089-ui/SaludWEB_Mobile/pull/49) | `9854e96` |
 | SaludWEB_Backend (13-14/11/2026) | [#53](https://github.com/ailenquaglino089-ui/SaludWEB_Backend/pull/53) | `76f36a4` |
-| SaludWEB_Web (16/11/2026) | [#69](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/69) | `0208692` |
+| SaludWEB_Web (16/11/2026, robot) | [#69](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/69) | `0208692` |
+| SaludWEB_Web (16/11/2026, login) | [#70](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/70) | `a3f389b` |
 
 Flujo recomendado para cada repositorio:
 
@@ -151,7 +175,7 @@ git diff --check
 git add <archivos revisados>
 git commit -m "docs: describir el cambio"
 git push origin HEAD
-gh pr create --repo <usuario>/<repositorio> --base main --head docs/access-connectivity --title "..." --body "..."
+gh pr create --repo <usuario>/<repositorio> --base main --head <rama-de-trabajo> --title "..." --body "..."
 gh pr merge --repo <usuario>/<repositorio> --merge
 git fetch origin
 git log --oneline -1 origin/main
