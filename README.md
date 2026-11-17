@@ -142,6 +142,56 @@ El detalle completo queda en
 Publicación: [PR #70](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/70),
 merge `a3f389b` en `main`.
 
+## Iteración 16/11/2026: Silvina primera en Turnera
+
+En el flujo **médico → Turnera → profesional → día y horario**, el selector
+**"Paciente para el que es el turno"** ahora muestra a **Silvina (DNI
+18007721)** inmediatamente después de "Elegí un paciente" y antes de "Acosta,
+Ana". El resto conserva el orden de la API. **No se modificaron usuarios, DNI,
+contraseñas, backend, base de datos ni app móvil.**
+
+### Paso a paso
+
+1. Ingresar a la aplicación con una cuenta de médico.
+2. Abrir **Turnera** desde la barra superior.
+3. Elegir un profesional con **Ver horarios**.
+4. Seleccionar un día y un horario libre.
+5. En **Confirmar turno**, ubicar el selector **"Paciente para el que es el turno"**.
+6. En `SaludWEB_Web/src/components/Turnera/ReservarTurno.jsx`, declarar
+   `DNI_PACIENTE_PRIORITARIO = '18007721'`.
+7. Copiar la lista de pacientes con `[...pacientes]` y ordenarla para que
+   Silvina quede primera sin modificar el estado original.
+8. Normalizar el DNI a solo dígitos para aceptar `18007721` o `18.007.721`.
+9. Renderizar el `<select>` con `pacientesOrdenados`.
+10. Verificar con Playwright el flujo real y las tres primeras opciones:
+    "Elegí un paciente", "Silvina (DNI: 18007721)" y "Acosta, Ana".
+11. Ejecutar `npm test` (32/32) y `npm run build` (OK, 140 módulos).
+12. Documentar y publicar por Pull Request.
+
+### Código comentado línea por línea
+
+```jsx
+// DNI de la paciente que debe quedar primera en el selector de Turnera.
+const DNI_PACIENTE_PRIORITARIO = '18007721';
+
+// Se copia el array para no modificar el estado original que vino de la API.
+const pacientesOrdenados = [...pacientes].sort((a, b) => {
+  // Se comparan solo los dígitos del DNI: acepta "18007721" o "18.007.721".
+  const aPrioritario = String(a.dni ?? '').replace(/\D/g, '') === DNI_PACIENTE_PRIORITARIO;
+  // Se hace la misma normalización para el segundo paciente de la comparación.
+  const bPrioritario = String(b.dni ?? '').replace(/\D/g, '') === DNI_PACIENTE_PRIORITARIO;
+  // Si los dos son Silvina o ninguno lo es, se conserva el orden de la API.
+  if (aPrioritario === bPrioritario) return 0;
+  // Si solo uno es prioritario, ese va antes que el resto.
+  return aPrioritario ? -1 : 1;
+});
+```
+
+El detalle completo queda en
+[`SaludWEB_Web/README.md`](https://github.com/ailenquaglino089-ui/SaludWEB_Web/blob/main/README.md).
+Publicación: [PR #71](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/71),
+merge `d94ac31` en `main`.
+
 ## Verificación
 
 - `npm test` en Web: **32/32 pruebas OK**.
@@ -165,6 +215,7 @@ Los merges de esta iteración quedaron así:
 | SaludWEB_Backend (13-14/11/2026) | [#53](https://github.com/ailenquaglino089-ui/SaludWEB_Backend/pull/53) | `76f36a4` |
 | SaludWEB_Web (16/11/2026, robot) | [#69](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/69) | `0208692` |
 | SaludWEB_Web (16/11/2026, login) | [#70](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/70) | `a3f389b` |
+| SaludWEB_Web (16/11/2026, Turnera) | [#71](https://github.com/ailenquaglino089-ui/SaludWEB_Web/pull/71) | `d94ac31` |
 
 Flujo recomendado para cada repositorio:
 
