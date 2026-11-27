@@ -1,3 +1,55 @@
+# ============================================================
+# .gitignore raíz del workspace SaludWEB
+#
+# IMPORTANTE: este repositorio ya NO contiene el código de la
+# aplicación. El proyecto se dividió en tres repositorios
+# independientes, y cada uno se versiona por separado:
+#
+#   SaludWEB_Backend/  ->  https://github.com/ailenquaglino089-ui/SaludWEB_Backend
+#   SaludWEB_Web/      ->  https://github.com/ailenquaglino089-ui/SaludWEB_Web
+#   SaludWEB_Mobile/   ->  https://github.com/ailenquaglino089-ui/SaludWEB_Mobile
+#
+# Acá queda solamente la documentación que abarca a los tres.
+# ============================================================
+
+# --- Los tres repositorios separados -------------------------
+# Son repositorios Git independientes, anidados dentro de esta
+# carpeta. Sin esto, Git los agrega como "gitlink" y este repo
+# queda apuntando a commits que solo existen en el otro lado.
+SaludWEB_Backend/
+SaludWEB_Mobile/
+SaludWEB_Web/
+
+# --- Herramienta de trabajo (Kilo Code) ----------------------
+# Los worktrees son copias de trabajo de la herramienta, con la
+# estructura vieja del proyecto. Nunca se versionan.
+.kilo/
+.kilocode/
+
+# --- Copia local del paquete de marca ------------------------
+# Los logos publicados están en SaludWEB_Web/docs/brand/.
+logo-canva/
+
+# --- Dependencias y builds ----------------------------------
+vendor/
+node_modules/
+dist/
+build/
+.vite/
+
+# --- Entorno y secretos (nunca se suben) ---------------------
+.env
+.env.local
+.env.*.local
+
+# --- Datos locales generados en runtime ---------------------
+storage/
+
+# --- Sistema y editor ---------------------------------------
+*.log
+Thumbs.db
+Desktop.ini
+.DS_Store
 ~$*.doc
 ~$*.docx
 ~$*.xls
