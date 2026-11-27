@@ -50,3 +50,9 @@ storage/
 Thumbs.db
 Desktop.ini
 .DS_Store
+~$*.doc
+~$*.docx
+~$*.xls
+~$*.xlsx
+~$*.ppt
+~$*.pptx
